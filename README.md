@@ -19,6 +19,6 @@ click an empty square first
 
 #Things I Would Change If I Was To Do It Again
 remove the letters and numbers from the side of the board
-add numbers to dark square only(this will make caculating moves easier as you can only move diagnally anyway no
+add numbers to dark square only(this will make calculating moves easier as you can only move diagnally anyway no
 white squares will ever be used)
 
