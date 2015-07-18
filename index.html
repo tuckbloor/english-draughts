@@ -1,0 +1,601 @@
+<!doctype html>
+<html>
+<head>
+    <title>Node JS Draughts</title>
+    <link href="/public/css/draughts.css" rel="stylesheet">
+</head>
+<body>
+<h1 id="whos-move">White</h1>
+<h3 id="blackp"></h3>
+<h3 id="whitep"></h3>
+<h3 id="whitepk"></h3>
+<h3 id="blackpk"></h3>
+<h3 id="taken"></h3>
+<div class="container">
+ <div class="sidebar"></div>
+</div>
+
+<input type="text" id="move_from_position"/>
+<input type="text" id="move_to_position"/>
+<button id="move">Move</button>
+<script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+<script>
+
+    var c = 'black';
+    var row = 'A'
+    var square_number = 1;
+    var row_number =0;
+    var s = 'A';
+    var board_letter_index = 0;
+    var turn;
+
+    //append board numbers
+    for(var i = 1; i <= 8; i++) {
+
+        $('.container').append("<div class='test'>" + i + "</div>");
+    }
+
+   for(var i = 1; i <= 64; i++) {
+
+       $('.container').append('<div class="square ' + c +'" id="square_'+ row + square_number +'" />');
+
+       square_number++;
+
+       if(square_number == 9) {
+           square_number = 1;
+       }
+
+       //append board letters
+       if(i == 0 || i == 8 || i == 16 || i == 24 || i == 32 || i == 40 || i == 48 || i == 56 || i == 63)  {
+           s = String.fromCharCode('A'.charCodeAt() + row_number)
+           $('.sidebar').append("<div class='test2'>" + s + "</div>");
+           row_number++;
+       }
+
+       //set square colours
+       if(i == 8 || i == 24 || i == 40 || i == 56) {
+           c = 'white';
+       }
+
+       else if(i == 16 || i == 32 || i == 48) {
+           c = 'black'
+       }
+       else {
+
+           if (c == 'black') {
+               c = "white";
+           } else {
+               c = 'black';
+           }
+       }
+
+       //set the square id's Number
+       var board_letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] ;
+
+       if(i % 8  == 0) {
+           board_letter_index++;
+           row = board_letters[board_letter_index];
+       }
+
+   } //end of for loop
+
+    //whites position
+    var white = ['square_A1', 'square_A3', 'square_A5', 'square_A7','square_B2', 'square_B4', 'square_B6', 'square_B8', 'square_C1', 'square_C3', 'square_C5', 'square_C7'];
+    var white_king = [];
+    //black positions
+    var black =['square_F2', 'square_F4', 'square_F6', 'square_F8', 'square_G1', 'square_G3', 'square_G5', 'square_G7', 'square_H2', 'square_H4', 'square_H6', 'square_H8'];
+    var black_king = [];
+
+
+    for (var i = 0; i <= white.length; i++) {
+        $('#' + white[i]).html('<img src="public/images/white.png" class="white-piece default">');
+    }
+
+    for (var i = 0; i <= black.length; i++) {
+        $('#' + black[i]).html('<img src="public/images/black.png" class="black-piece default">');
+    }
+
+
+    var move = 1;
+    var socket = io();
+    socket.player = white;
+    socket.player_king = white_king;
+    socket.black = black;
+    socket.white = white;
+    socket.white_king = white_king;
+    socket.black_king = black_king;
+
+    $('.container div').on('click', function() {
+        if($('#move_from_position').val() == '') {
+            var position = String($(this).attr('id'));
+            position = position.slice(-2);
+            $('#move_from_position').val(position);
+        } else {
+            var position = String($(this).attr('id'));
+            position = position.slice(-2);
+            $('#move_to_position').val(position);
+
+            $('#move').trigger('click');
+        }
+    });
+
+   $('#move').on('click', function() {
+
+        //get the values from the to and from input
+        var from = $('#move_from_position').val();
+        var to = $('#move_to_position').val();
+
+        //convert input to varables
+        var to_letter = to[0];
+        var to_number = parseInt(to[1]);
+        var from_letter = from[0];
+        var from_number = parseInt(from[1]);
+        var original_position =  'square_' + from;
+        var type = $('#' + original_position).find('img').attr('class').split(' ')[1];
+        var new_position = 'square_' + to;
+
+       //create array for allowed numbers and letters
+       var allowed_letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+       var allowed_numbers = [1,2,3,4,5,6,7,8];
+
+        //this is a default piece
+        if(socket.player.indexOf(original_position) != -1) {
+
+            //check see if white square is at tha to position
+            if(socket.player.indexOf(new_position) != -1) {
+                $('#move_to_position').val('');
+                $('#move_from_position').val('');
+                return(alert('cant move your piece there'));
+           } else {
+
+                //numbers can move to
+                if(socket.player == socket.white) {
+                    var negative_from_number = (from_number - 1);
+                    var positive_from_number = (from_number + 1);
+                    var next_letter = String.fromCharCode(from_letter.charCodeAt() + 1)
+                }
+
+                if(socket.player == socket.black) {
+                    var negative_from_number = (from_number + 1);
+                    var positive_from_number = (from_number - 1);
+                    var next_letter = String.fromCharCode(from_letter.charCodeAt() - 1)
+                }
+
+                //validation
+                //check if a valid letter
+                if( $.inArray(to_letter, allowed_letters)  == -1 ) {
+                    $('#move_to_position').val('');
+                    $('#move_from_position').val('');
+                    return(alert('not a valid letter'));
+                }
+
+                //check if a valid number
+                if( $.inArray(to_number, allowed_numbers)  == -1 ) {
+                    $('#move_to_position').val('');
+                    $('#move_from_position').val('');
+                    return(alert('not a valid number'));
+                }
+
+                //check if trying to move sideways
+                if(from_letter == to_letter) {
+                    $('#move_to_position').val('');
+                    $('#move_from_position').val('');
+                    return(alert("you can only move forwards"));
+                }
+
+                ////alert you cant move sideways
+                if(from_number == to_number) {
+                    $('#move_to_position').val('');
+                    $('#move_from_position').val('');
+                    return(alert("you cant move like that"))
+                }
+
+                if(socket.player == socket.white) {
+                    //get the previous letter
+                    var previous_letter = String.fromCharCode(from_letter.charCodeAt() - 1)
+                }
+
+                if(socket.player == socket.black) {
+                    var previous_letter = String.fromCharCode(from_letter.charCodeAt() + 1)
+                }
+
+
+                if (previous_letter == to_letter) {
+                    $('#move_to_position').val('');
+                    $('#move_from_position').val('');
+                    return (alert("you cant move backwards"));
+                }
+            }
+
+                //end validation
+
+                //check that the letter is correct row and number is ok column
+                if (next_letter == to_letter && to_number == positive_from_number || to_number == negative_from_number) {
+                // move forward 1
+
+                    //check see if there is a black or white piece in this square
+                    var square = "square_" + to_letter + to_number;
+
+                    if( $.inArray(square, black) != -1 ) {
+                        $('#move_to_position').val('');
+                        $('#move_from_position').val('');
+                        return(alert('There is a black pice there'))
+                    }
+
+                    if( $.inArray(square, white) != -1 ) {
+                        $('#move_to_position').val('');
+                        $('#move_from_position').val('');
+                        return(alert('There is a white pice there'))
+                    }
+                    //validation passed so move players piece 1 square
+                    socket.emit('move', original_position, new_position, to_letter, to_number);
+
+                } else {
+
+                    //take opponents piece
+                    //find out if moved left or right
+                    if(socket.player == socket.white) {//this is where i am up to
+                        if (from_number < to_number) {
+                            //right
+                            var taken_players_square = 'square_' + next_letter + positive_from_number;
+                        } else {
+                            //left
+                            var taken_players_square = 'square_' + next_letter + negative_from_number;
+                        }
+                    }
+
+                    if(socket.player == socket.black) {
+                        if (from_number > to_number) {
+                            //right
+                            var taken_players_square = 'square_' + next_letter + positive_from_number;
+                        } else {
+                            //left
+                            var taken_players_square = 'square_' + next_letter + negative_from_number;
+                        }
+                    }
+                     //check see if opposition piece here
+
+                    if( $.inArray(taken_players_square, socket.player)  == -1 ) {
+
+                        //find expected letter
+                        if(socket.player == socket.white) {
+                            var expected_square_letter = String.fromCharCode(from_letter.charCodeAt() + 2);
+                        }
+
+                        if(socket.player == socket.black) {
+                            var expected_square_letter = String.fromCharCode(from_letter.charCodeAt() - 2);
+                        }
+
+                        if(to_letter != expected_square_letter) {
+                            $('#move_to_position').val('');
+                            $('#move_from_position').val('');
+                            return(alert('You can not move here !!!!'))
+                        }
+                        //find out if white squre is in white or black array
+                        if( $.inArray('square_' + expected_square_letter + to_number, socket.black)  > -1 ) {
+                            $('#move_to_position').val('');
+                            $('#move_from_position').val('');
+                          return(alert('you can not move here black pece'));
+                        }
+
+                        if( $.inArray('square_' + expected_square_letter + to_number, socket.white)  > -1 ) {
+                            $('#move_to_position').val('');
+                            $('#move_from_position').val('');
+                            return(alert('you can not move here white pece'));
+                        }
+
+                        //validation passed so take oppositions piece
+                        socket.emit('taken_player', original_position, new_position, to_letter, to_number, taken_players_square);
+
+                    } else {
+                        $('#move_to_position').val('');
+                        $('#move_from_position').val('');
+                        return(alert('cant move here position not allowed'));
+                    }
+                }
+
+            }
+//king move take
+//need find the taken square  here first
+        else if(socket.player_king.indexOf(original_position) != -1) {
+
+           var expected_letter_a_take = String.fromCharCode(from_letter.charCodeAt() + 2);
+           var expected_letter_b_take = String.fromCharCode(from_letter.charCodeAt() - 2);
+           var expected_letter_a_move = String.fromCharCode(from_letter.charCodeAt() + 1);
+           var expected_letter_b_move = String.fromCharCode(from_letter.charCodeAt() - 1);
+
+           // here need to find if going forward or backwards
+           if(socket.player == socket.white) {
+
+               if(from_number < to_number) {
+                   var negative_from_number = (from_number - 1);
+                   var positive_from_number = (from_number + 1);
+                   var next_letter = String.fromCharCode(from_letter.charCodeAt() + 1)
+               } else {
+                   var negative_from_number = (from_number + 1);
+                   var positive_from_number = (from_number - 1);
+                   var next_letter = String.fromCharCode(from_letter.charCodeAt() - 1)
+               }
+           }
+
+           if(socket.player == socket.black) {
+
+               if(from_number > to_number) {
+                   var negative_from_number = (from_number + 1);
+                   var positive_from_number = (from_number - 1);
+                   var next_letter = String.fromCharCode(from_letter.charCodeAt() - 1)
+               } else {
+                   var negative_from_number = (from_number - 1);
+                   var positive_from_number = (from_number + 1);
+                   var next_letter = String.fromCharCode(from_letter.charCodeAt() + 1)
+               }
+           }
+
+           if(from_letter < to_letter) {
+               if (from_number < to_number) {
+                   var taken_players_square = 'square_' + next_letter + positive_from_number;
+               } else {
+                   next_letter = String.fromCharCode(from_letter.charCodeAt() +1)
+                   var taken_players_square = 'square_' + next_letter + positive_from_number;
+               }
+           }
+
+           else if(from_letter > to_letter) {
+               if (from_number > to_number) {
+                   var taken_players_square = 'square_' + next_letter + positive_from_number;
+               } else {
+                   next_letter = String.fromCharCode(from_letter.charCodeAt() -1)
+                   var taken_players_square = 'square_' + next_letter + positive_from_number;
+               }
+           }
+
+          else if(from_letter < to_letter) {
+               if (from_number > to_number) {
+                   var taken_players_square = 'square_' + next_letter + positive_from_number;
+               } else {
+                   var taken_players_square = 'square_' + next_letter + negative_from_number;
+               }
+           }
+
+           else if(from_letter > to_letter) {
+               if (from_number < to_number) {
+                   var taken_players_square = 'square_' + next_letter + negative_from_number;
+               } else {
+                   var taken_players_square = 'square_' + next_letter + positive_from_number;
+               }
+           }
+
+           if(to_letter == expected_letter_a_move || to_letter == expected_letter_b_move ) {
+               socket.emit('move', original_position, new_position, to_letter, to_number);
+           }
+
+           if(to_letter == expected_letter_a_take || to_letter == expected_letter_b_take ) {
+               socket.emit('taken_player',original_position, new_position, to_letter, to_number, taken_players_square);
+           }
+
+        }
+
+        else {
+                alert('your piece is not on ' + to_letter + to_number);
+        }
+
+            //clear input
+            $('#move_to_position').val('');
+            $('#move_from_position').val('');
+
+    })
+
+    socket.on('move', function(original_position, new_position, to_letter, to_number) {
+        var turn;
+        move++;
+        socket.move = move;
+        if(move % 2 == 0) {
+            turn ='black'
+        }
+        else {
+            turn = 'white'
+        }
+        socket.emit($('h1').text(turn))
+//get type from html for king or default
+
+        var type = $('#' + original_position).find('img').attr('class').split(' ')[1];
+
+        if(move % 2 != 0) {
+
+            if(socket.player == socket.black && to_letter == 'H' && type == 'default') {
+                socket.emit($('#' + new_position).html('<img src="public/images/black-king.png" class="black-piece king">'));
+                //push black_king to white king array
+                socket.black_king.push(new_position);
+                //remove old square from array
+                socket.black.splice( $.inArray(original_position, socket.black), 1 );
+
+            } else {
+
+                var html = $('#' + original_position).html();
+                var type = $('#' + original_position).find('img').attr('class').split(' ')[1];
+                socket.emit($('#' + new_position).html(html));
+                //push new position into black arr[y
+                if (type != 'king') {
+                    socket.black.push(new_position);
+                    //remove old square from array
+                    socket.black.splice($.inArray(original_position, socket.black), 1);
+                } else {
+                    //remove old square from array
+                    socket.black_king.splice($.inArray(original_position, socket.black_king), 1);
+                    socket.black_king.push(new_position)
+                }
+            }
+            socket.player      = socket.white;
+            socket.player_king = socket.white_king;
+
+
+        } else {
+            //white move
+            if(socket.player == socket.white && to_letter == 'A' && type =='default') {
+
+                socket.emit($('#' + new_position).html('<img src="public/images/white-king.png" class="white-piece king">'));
+                //push white_king to white king array
+                socket.white_king.push(new_position);
+                //remove old square from array
+                socket.white.splice( $.inArray(original_position, socket.white), 1 );
+
+            } else {
+                var html = $('#' + original_position).html();
+                var type = $('#' + original_position).find('img').attr('class').split(' ')[1];
+                socket.emit($('#' + new_position).html(html));
+                //push new position into black arr[y
+                if (type != 'king') {
+                    socket.white.push(new_position);
+                    //remove old square from array
+                    socket.white.splice($.inArray(original_position, socket.white), 1);
+                } else {
+                    //remove old square from array
+                    socket.white_king.splice($.inArray(original_position, socket.white_king), 1);
+                    socket.white_king.push(new_position)
+                }
+            }
+
+            socket.player      = socket.black;
+            socket.player_king = socket.black_king;
+        }
+
+        //clear the old square
+        socket.emit($('#' + original_position).find('img').fadeOut(1500));
+        socket.emit($('#blackp').text('black ' + socket.black));
+        socket.emit($('#whitep').text('white ' + socket.white ));
+        socket.emit($('#whitepk').text('white king ' + socket.white_king ));
+        socket.emit($('#blackpk').text('black king ' + socket.black_king ));
+
+
+    })
+
+    socket.on('taken_player', function(original_position, new_position, to_letter, to_number, taken_players_square) {
+
+        //if land on d its a king any way
+        var type = $('#' + original_position).find('img').attr('class').split(' ')[1];
+
+        if (move % 2 == 0) {
+            if (type == 'king') {
+                socket.emit($('#' + new_position).html('<img src="public/images/black-king.png" class="black-piece king">'));
+            } else {
+                socket.emit($('#' + new_position).html('<img src="public/images/black.png" class="black-piece default">'));
+            }
+
+        } else {
+            if (type == 'king') {
+                socket.emit($('#' + new_position).html('<img src="public/images/white-king.png" class="white-piece king">'));
+            } else {
+                socket.emit($('#' + new_position).html('<img src="public/images/white.png" class="white-piece default">'));
+            }
+        }
+
+        move++;
+        socket.move = move;
+        if (move % 2 == 0) {
+            turn = 'black'
+        }
+        else {
+            turn = 'white'
+        }
+
+        var taken_players_type = $('#' + taken_players_square).find('img').attr('class').split(' ')[1];
+
+        if (move % 2 != 0) {
+            //black move
+
+            if (type != 'king') {
+                    socket.black.splice($.inArray(original_position, socket.black), 1);
+                    socket.black.push('square_' + to_letter + to_number);
+                } else {
+                    socket.black_king.splice($.inArray(original_position, socket.black_king), 1);
+                    socket.black_king.push('square_' + to_letter + to_number);
+            }
+
+            if (taken_players_type != 'king') {
+                socket.white.splice($.inArray(taken_players_square, socket.white), 1);
+            } else {
+                socket.white_king.splice($.inArray(taken_players_square, socket.white_king), 1);
+            }
+
+            socket.player = socket.white;
+            socket.player_king = socket.white_king;
+
+        } else {
+            //white move
+
+            if(type != 'king') {
+                //remove old square from array
+                socket.white.splice( $.inArray(original_position, socket.white), 1 );
+                socket.white.push('square_' + to_letter + to_number);
+            } else {
+                //remove old square from array
+                socket.white_king.splice( $.inArray(original_position, socket.white_king), 1 );
+                socket.white_king.push('square_' + to_letter + to_number);
+            }
+
+            if(taken_players_type != 'king') {
+                socket.black.splice($.inArray(taken_players_square, socket.black), 1);
+            } else {
+                socket.black_king.splice($.inArray(taken_players_square, socket.black_king), 1);
+            }
+
+            //tak second pice if move  is white player
+            if(socket.player == socket.white ) {
+                if(type == 'default') {
+
+                     var possible_move_letter = String.fromCharCode(to_letter.charCodeAt() + 1);
+                     var positive_number = (to_number +1);
+                     var negative_number = (to_number -1);
+
+                     if( $.inArray('square_' + possible_move_letter + positive_number, socket.black)  !== -1 && to_number < positive_number) {
+                         alert('square_' + possible_move_letter + positive_number)
+////////////////////////////here
+                         var second_possible_move_letter = String.fromCharCode(to_letter.charCodeAt() + 2);
+
+                         var negative_number = to_number -2;
+                         alert(second_possible_move_letter + negative_number);
+                         var second_taken_square = possible_move_letter + negative_number
+
+                         if( $.inArray('square_' + second_taken_square, socket.black)  !== -1 || $.inArray('square_' + second_taken_square, socket.white) !== -1) {
+                            alert('cant move second time')
+                         } else {
+                             alert('do taking here')
+                             socket.emit($('#square_' + second_taken_square).find('img').fadeOut(5000));
+                             socket.emit($('#' + new_position).find('img').fadeOut(5000));
+                             socket.emit($('#square_' + possible_move_letter + (negative_number + 1)).find('img').fadeOut(6000));
+                             //new position remove from white array
+                             alert(possible_move_letter + (negative_number + 1))
+                             socket.emit($('#square_' + second_possible_move_letter + negative_number).html('').hide().html('<img src="public/images/white.png" class="white-piece default">').fadeIn(8000));
+                            // remove second player from black array
+                         }
+
+                     } else {
+                         alert('next move here')
+                     }
+
+                }
+            }
+            
+            socket.player = socket.black;
+            socket.player_king = socket.black_king;
+        }
+
+        socket.emit($('h1').text(turn))
+        //clear the old square
+        socket.emit($('#' + original_position).find('img').fadeOut(1500));
+        socket.emit($('#' + taken_players_square).find('img').fadeOut(3000));
+        socket.emit($('#blackp').text('black ' + socket.black));
+        socket.emit($('#whitep').text('white ' + socket.white ));
+        socket.emit($('#whitepk').text('white king oatcake' + socket.white_king ));
+        socket.emit($('#blackpk').text('black king oatcake' + socket.black_king ));
+        socket.emit($('#taken').text(taken_players_square));
+
+
+    })
+
+
+</script>
+
+</body>
+</html>
